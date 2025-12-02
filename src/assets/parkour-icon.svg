@@ -1,0 +1,63 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- White background circle -->
+  <circle cx="20" cy="20" r="19" fill="#FFFFFF" stroke="#003087" stroke-width="1.5"/>
+  
+  <!-- Barrier - horizontal beam with vertical supports -->
+  <!-- Main horizontal barrier -->
+  <rect x="4" y="28" width="32" height="4" fill="#003087"/>
+  <!-- Vertical support posts with jagged bottom edges (grass/uneven ground) -->
+  <path d="M7 32 L7 36 L6.5 36.5 L7.5 37 L8 36.5 L7.5 36 L8 36 L8 32 Z" fill="#003087"/>
+  <path d="M18 32 L18 36 L17.5 36.5 L18.5 37 L19 36.5 L18.5 36 L19 36 L19 32 Z" fill="#003087"/>
+  <path d="M29 32 L29 36 L28.5 36.5 L29.5 37 L30 36.5 L29.5 36 L30 36 L30 32 Z" fill="#003087"/>
+  <!-- Vertical texture lines on right end of barrier -->
+  <line x1="33" y1="28" x2="33" y2="32" stroke="#004C97" stroke-width="0.8" opacity="0.7"/>
+  <line x1="34" y1="28" x2="34" y2="32" stroke="#004C97" stroke-width="0.8" opacity="0.7"/>
+  <line x1="35" y1="28" x2="35" y2="32" stroke="#004C97" stroke-width="0.8" opacity="0.7"/>
+  
+  <!-- Person vaulting - complete silhouette in blue -->
+  <!-- Head with short spiky hair -->
+  <circle cx="20" cy="8" r="2.8" fill="#003087"/>
+  <!-- Spiky hair texture -->
+  <path d="M18.5 6.5 L19 6 L19.5 6.5 M20.5 6.5 L21 6 L21.5 6.5" stroke="#003087" stroke-width="0.5" stroke-linecap="round"/>
+  
+  <!-- Torso (t-shirt) - body angled slightly to the right -->
+  <path d="M20 10.8 L21 18" 
+        stroke="#003087" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="19" y="10.8" width="4" height="8" rx="1" fill="#003087"/>
+  
+  <!-- Left arm raised high and bent at elbow, hand open with fingers spread -->
+  <path d="M19 13 L16 8" 
+        stroke="#003087" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Left hand open with spread fingers -->
+  <circle cx="15.5" cy="7.5" r="1.5" fill="#003087"/>
+  <line x1="15.5" y1="7.5" x2="14.2" y2="6.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="15.5" y1="7.5" x2="14.5" y2="7.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="15.5" y1="7.5" x2="14.2" y2="8.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="15.5" y1="7.5" x2="15.5" y2="6.2" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  
+  <!-- Right arm extended downwards, hand open with fingers spread -->
+  <path d="M21 13 L24 20" 
+        stroke="#003087" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right hand open with spread fingers -->
+  <circle cx="24.5" cy="20.5" r="1.5" fill="#003087"/>
+  <line x1="24.5" y1="20.5" x2="25.8" y2="19.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="24.5" y1="20.5" x2="25.5" y2="20.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="24.5" y1="20.5" x2="25.8" y2="21.5" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="24.5" y1="20.5" x2="24.5" y2="19.2" stroke="#003087" stroke-width="1.2" stroke-linecap="round"/>
+  
+  <!-- Left leg tucked under, pants visible -->
+  <path d="M20 18 L17 24" 
+        stroke="#003087" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="16" y="18" width="4" height="7" rx="1" fill="#003087"/>
+  <!-- Left athletic shoe (laced) -->
+  <ellipse cx="16.5" cy="25.5" rx="2" ry="1.2" fill="#003087"/>
+  <line x1="15.8" y1="25.5" x2="17.2" y2="25.5" stroke="#004C97" stroke-width="0.8" opacity="0.6"/>
+  
+  <!-- Right leg extended forward and slightly upwards -->
+  <path d="M21 18 L25 22" 
+        stroke="#003087" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="21" y="18" width="5" height="5" rx="1" fill="#003087"/>
+  <!-- Right athletic shoe (laced) -->
+  <ellipse cx="25.5" cy="23.5" rx="2" ry="1.2" fill="#003087" transform="rotate(25 25.5 23.5)"/>
+  <line x1="24.8" y1="23.5" x2="26.2" y2="23.5" stroke="#004C97" stroke-width="0.8" opacity="0.6" transform="rotate(25 25.5 23.5)"/>
+</svg>

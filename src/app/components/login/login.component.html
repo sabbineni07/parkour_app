@@ -1,0 +1,72 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <img src="assets/parkour-icon.svg" alt="Parkour Logo" class="login-logo">
+      <h2 class="login-title">Welcome to Parkour</h2>
+      <p class="login-subtitle">Please sign in to continue</p>
+    </div>
+    
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      <div class="mb-3">
+        <label for="username" class="form-label">
+          <i class="bi bi-person-circle login-icon me-2"></i>Username
+        </label>
+        <input
+          type="text"
+          class="form-control"
+          id="username"
+          formControlName="username"
+          [class.is-invalid]="submitted && f['username'].errors"
+          placeholder="Enter your username"
+        />
+        <div class="invalid-feedback" *ngIf="submitted && f['username'].errors?.['required']">
+          Username is required
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">
+          <i class="bi bi-lock-fill me-2"></i>Password
+        </label>
+        <input
+          type="password"
+          class="form-control"
+          id="password"
+          formControlName="password"
+          [class.is-invalid]="submitted && f['password'].errors"
+          placeholder="Enter your password"
+        />
+        <div class="invalid-feedback" *ngIf="submitted && f['password'].errors?.['required']">
+          Password is required
+        </div>
+        <div class="invalid-feedback" *ngIf="submitted && f['password'].errors?.['minlength']">
+          Password must be at least 6 characters
+        </div>
+      </div>
+
+      <div class="mb-3" *ngIf="errorMessage">
+        <div class="alert alert-danger" role="alert">
+          {{ errorMessage }}
+        </div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary btn-lg" [disabled]="isLoading">
+          <span *ngIf="!isLoading">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+          </span>
+          <span *ngIf="isLoading">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Signing In...
+          </span>
+        </button>
+      </div>
+      <!-- <div class="text-center mt-3">
+        <button type="button" class="btn btn-link text-decoration-none" style="color: var(--navy-primary);">
+          <i class="bi bi-fingerprint biometric-icon me-2"></i>Use Biometric Login
+        </button>
+      </div> -->
+    </form>
+  </div>
+</div>
+

@@ -1,0 +1,65 @@
+/* Blue Color Theme */
+:root {
+  --navy-primary: #003087;
+  --navy-secondary: #004C97;
+  --navy-dark: #001F5C;
+  --navy-light: #0056B3;
+  --navy-accent: #0066CC;
+  --navy-text: #1A1A1A;
+  --navy-text-light: #666666;
+  --navy-bg: #F5F5F5;
+  --navy-white: #FFFFFF;
+  --navy-border: #CCCCCC;
+  --navy-success: #28A745;
+  --navy-error: #DC3545;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--navy-text);
+  background-color: var(--navy-bg);
+}
+
+/* Custom Bootstrap overrides for Blue theme */
+.btn-primary {
+  background-color: var(--navy-primary);
+  border-color: var(--navy-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--navy-secondary);
+  border-color: var(--navy-secondary);
+}
+
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--navy-dark);
+  border-color: var(--navy-dark);
+}
+
+.form-control:focus {
+  border-color: var(--navy-accent);
+  box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
+}
+
+/* Navigation styles */
+.nav-link {
+  color: var(--navy-text);
+}
+
+.nav-link:hover {
+  color: var(--navy-primary);
+}
+
+.nav-link.active {
+  color: var(--navy-primary);
+  font-weight: 600;
+}
+
+

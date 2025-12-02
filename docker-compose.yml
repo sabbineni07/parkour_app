@@ -1,0 +1,21 @@
+services:
+  parkour-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parkour-angular
+    ports:
+      - "4200:80"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Mount for development hot-reload (optional)
+      - ./src:/app/src:ro
+    restart: unless-stopped
+    networks:
+      - parkour-network
+
+networks:
+  parkour-network:
+    driver: bridge
+

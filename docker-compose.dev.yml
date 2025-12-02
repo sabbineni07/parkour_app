@@ -1,0 +1,23 @@
+services:
+  parkour-frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: parkour-angular-dev
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm start
+    restart: unless-stopped
+    networks:
+      - parkour-network
+
+networks:
+  parkour-network:
+    driver: bridge
+

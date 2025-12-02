@@ -1,0 +1,36 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="sidebar-toggle-btn" (click)="toggleSidebar()" type="button" aria-label="Toggle sidebar">
+          <i class="bi toggle-icon" [ngClass]="sidebarOpen ? 'bi-chevron-left' : 'bi-chevron-right'"></i>
+        </button>
+        <img src="assets/parkour-icon.svg" alt="Parkour Logo" class="app-logo">
+        <h1 class="app-title">Parkour</h1>
+      </div>
+      <div class="header-right">
+        <span class="welcome-text">Welcome, {{ username }}</span>
+        <button class="btn btn-outline-light btn-sm ms-3" (click)="logout()">
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-body">
+    <!-- Left Navigation Panel -->
+    <app-sidebar
+      [menuItems]="menuItems"
+      [activeMenuItem]="activeMenuItem"
+      [isOpen]="sidebarOpen"
+      (menuItemClick)="onMenuItemClick($event)"
+    ></app-sidebar>
+
+    <!-- Main Content Area -->
+    <main class="main-content" [class.sidebar-closed]="!sidebarOpen">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
