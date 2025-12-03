@@ -308,16 +308,20 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                     style: {
                         'background-color': nodeColor,
                         'label': displayName,
-                        'width': 60,
-                        'height': 60,
-                        'shape': 'ellipse',
+                        'width': 'label',
+                        'height': 'label',
+                        'shape': 'roundrectangle',
                         'border-width': 2,
                         'border-color': '#000',
-                        'font-size': '12px',
+                        'font-size': '11px',
                         'text-valign': 'center',
                         'text-halign': 'center',
                         'text-wrap': 'wrap',
-                        'text-max-width': '80px'
+                        'text-max-width': '120px',
+                        'padding': '10px',
+                        'text-margin-y': 0,
+                        'text-margin-x': 4,
+                        'text-overflow-wrap': 'anywhere'
                     }
                 });
             });
@@ -408,14 +412,19 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
             
             // Add hover effects and tooltip
             let tooltipElement: HTMLElement | null = null;
+            let tooltipUpdateHandler: ((e: MouseEvent) => void) | null = null;
             
             this.cy.on('mouseover', 'node', (evt: any) => {
                 const node = evt.target;
-                evt.target.style('width', 80);
-                evt.target.style('height', 80);
+                // Scale up on hover instead of fixed size
+                evt.target.style('width', 'label');
+                evt.target.style('height', 'label');
+                evt.target.style('font-size', '13px');
+                evt.target.style('text-max-width', '150px');
                 
-                // Show tooltip with full name
-                const fullName = node.data('fullName') || node.data('label');
+                // Get full name from node data or dataset
+                const dataset = node.data('dataset');
+                const fullName = dataset?.dataset_name || node.data('fullName') || node.data('label') || node.data('id');
                 const datasetId = node.data('id');
                 
                 // Remove existing tooltip if any
@@ -423,30 +432,43 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                     tooltipElement.parentNode.removeChild(tooltipElement);
                 }
                 
+                // Create tooltip
                 tooltipElement = document.createElement('div');
                 tooltipElement.className = 'dag-tooltip';
-                tooltipElement.innerHTML = `<strong>${fullName}</strong><br><small>ID: ${datasetId}</small>`;
+                tooltipElement.innerHTML = `<strong>${this.escapeHtml(fullName)}</strong><br><small>ID: ${this.escapeHtml(datasetId)}</small>`;
+                tooltipElement.style.position = 'absolute';
+                tooltipElement.style.pointerEvents = 'none';
+                tooltipElement.style.zIndex = '10000';
                 document.body.appendChild(tooltipElement);
-            });
-            
-            this.cy.on('mousemove', 'node', (evt: any) => {
-                if (tooltipElement) {
-                    const mouseEvent = evt.originalEvent as MouseEvent;
-                    if (mouseEvent) {
-                        tooltipElement.style.left = (mouseEvent.pageX + 10) + 'px';
-                        tooltipElement.style.top = (mouseEvent.pageY + 10) + 'px';
+                
+                // Create update handler
+                tooltipUpdateHandler = (e: MouseEvent) => {
+                    if (tooltipElement) {
+                        tooltipElement.style.left = (e.pageX + 15) + 'px';
+                        tooltipElement.style.top = (e.pageY + 15) + 'px';
                     }
-                }
+                };
+                
+                // Add mousemove listener to document
+                document.addEventListener('mousemove', tooltipUpdateHandler);
             });
             
             this.cy.on('mouseout', 'node', (evt: any) => {
-                evt.target.style('width', 60);
-                evt.target.style('height', 60);
+                // Reset to normal size
+                evt.target.style('width', 'label');
+                evt.target.style('height', 'label');
+                evt.target.style('font-size', '11px');
+                evt.target.style('text-max-width', '120px');
                 
-                // Remove tooltip
+                // Remove tooltip and event listener
                 if (tooltipElement && tooltipElement.parentNode) {
                     tooltipElement.parentNode.removeChild(tooltipElement);
                     tooltipElement = null;
+                }
+                
+                if (tooltipUpdateHandler) {
+                    document.removeEventListener('mousemove', tooltipUpdateHandler);
+                    tooltipUpdateHandler = null;
                 }
             });
             
@@ -559,6 +581,12 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
         // Fallback to space-separated words
         const words = trimmed.split(/\s+/);
         return words.length > 0 ? words[words.length - 1] : trimmed;
+    }
+    
+    escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     ngOnDestroy(): void {
