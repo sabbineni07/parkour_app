@@ -1,9 +1,16 @@
 <div class="datasets-container">
     <div class="datasets-header">
-        <h2 class="page-title">
-            <i class="bi bi-database me-2"></i>Datasets
-        </h2>
-        <p class="page-subtitle">Manage and view your data collections</p>
+        <div class="header-content">
+            <div>
+                <h2 class="page-title">
+                    <i class="bi bi-database me-2"></i>Datasets
+                </h2>
+                <p class="page-subtitle">Manage and view your data collections</p>
+            </div>
+            <button class="btn btn-primary" (click)="openCreateModal()">
+                <i class="bi bi-plus-circle me-2"></i>Create Dataset
+            </button>
+        </div>
     </div>
 
     <div class="datasets-content">
@@ -56,15 +63,23 @@
                         <p class="mt-3 text-muted">No datasets found</p>
                     </div>
                     <div *ngIf="datasets.length > 0" [style.min-height]="getMinHeight()">
-                        <jqxGrid
-                            #datasetsGrid
-                            [height]="'100%'" [width]="'100%'"
-                            [source]="datasetsDataAdapter" [columns]="gridColumns"
-                            [sortable]="true"
-                            [altrows]="true" [columnsresize]="true" [filterable]="true" [enabletooltips]="true"
-                            [editable]="false">
-                        </jqxGrid>
-<!--                        [pageable]="true" [pagesize]="50"-->
+                        <div class="grid-wrapper">
+                            <jqxGrid
+                                #datasetsGrid
+                                [height]="'100%'" [width]="'100%'"
+                                [source]="datasetsDataAdapter" [columns]="gridColumns"
+                                [sortable]="true"
+                                [altrows]="true" [columnsresize]="true" [filterable]="true" [enabletooltips]="true"
+                                [editable]="false"
+                                [selectionmode]="'singleRow'"
+                                (onRowdoubleclick)="onGridRowDoubleClick($event)">
+                            </jqxGrid>
+                        </div>
+                        <div class="grid-help-text">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>Double-click a row to edit | Click the delete icon to remove a dataset
+                            </small>
+                        </div>
                     </div>
                 </div>
 
@@ -190,8 +205,254 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Datasets List with Actions -->
+                    <div class="stats-section">
+                        <h4 class="stats-section-title">
+                            <i class="bi bi-list-ul me-2"></i>All Datasets
+                        </h4>
+                        <div class="datasets-list">
+                            <div *ngFor="let dataset of datasets" class="dataset-item-card">
+                                <div class="dataset-item-header">
+                                    <h5>{{ dataset.dataset_name }}</h5>
+                                    <span class="badge" [ngClass]="{
+                                        'bg-success': dataset.status === 'active',
+                                        'bg-warning': dataset.status === 'inactive',
+                                        'bg-secondary': dataset.status === 'pending'
+                                    }">{{ dataset.status }}</span>
+                                </div>
+                                <div class="dataset-item-body">
+                                    <div class="dataset-item-info">
+                                        <span><strong>ID:</strong> {{ dataset.dataset_id }}</span>
+                                        <span><strong>Type:</strong> {{ dataset.dataset_type }}</span>
+                                        <span><strong>Layer:</strong> {{ dataset.layer }}</span>
+                                        <span><strong>Dependencies:</strong> {{ (dataset.upstream_dependencies || []).length }}</span>
+                                    </div>
+                                </div>
+                                <div class="dataset-item-actions">
+                                    <button class="btn btn-sm btn-outline-primary" (click)="openEditModal(dataset)">
+                                        <i class="bi bi-pencil me-1"></i>Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" (click)="openDeleteModal(dataset)">
+                                        <i class="bi bi-trash me-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </jqxTabs>
+        </div>
+    </div>
+
+    <!-- Create Dataset Modal -->
+    <div class="modal-overlay" *ngIf="showCreateModal" (click)="closeModals()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Create New Dataset</h3>
+                <button type="button" class="btn-close" (click)="closeModals()" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form [formGroup]="datasetForm" (ngSubmit)="onCreateSubmit()">
+                <div class="modal-body">
+                    <div *ngIf="formError" class="alert alert-danger">
+                        {{ formError }}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="mb-3">
+                                <label for="create_dataset_id" class="form-label">Dataset ID <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="create_dataset_id" formControlName="dataset_id"
+                                           [class.is-invalid]="datasetForm.get('dataset_id')?.invalid && datasetForm.get('dataset_id')?.touched"
+                                           placeholder="Auto-generated UUID">
+                                    <button type="button" class="btn btn-outline-secondary" (click)="regenerateUUID()" title="Generate new UUID">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">A unique UUID is automatically generated. You can regenerate it if needed.</small>
+                                <div class="invalid-feedback" *ngIf="datasetForm.get('dataset_id')?.invalid && datasetForm.get('dataset_id')?.touched">
+                                    Dataset ID is required and must be at least 3 characters.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="create_dataset_name" class="form-label">Dataset Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="create_dataset_name" formControlName="dataset_name"
+                                       [class.is-invalid]="datasetForm.get('dataset_name')?.invalid && datasetForm.get('dataset_name')?.touched"
+                                       placeholder="Enter dataset name">
+                                <div class="invalid-feedback" *ngIf="datasetForm.get('dataset_name')?.invalid && datasetForm.get('dataset_name')?.touched">
+                                    Dataset name is required and must be at least 3 characters.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="create_dataset_type" class="form-label">Dataset Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="create_dataset_type" formControlName="dataset_type"
+                                        [class.is-invalid]="datasetForm.get('dataset_type')?.invalid && datasetForm.get('dataset_type')?.touched">
+                                    <option value="">Select type</option>
+                                    <option *ngFor="let type of datasetTypes" [value]="type">{{ type }}</option>
+                                </select>
+                                <div class="invalid-feedback" *ngIf="datasetForm.get('dataset_type')?.invalid && datasetForm.get('dataset_type')?.touched">
+                                    Please select a dataset type.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-col">
+                            <div class="mb-3">
+                                <label for="create_layer" class="form-label">Layer <span class="text-danger">*</span></label>
+                                <select class="form-select" id="create_layer" formControlName="layer"
+                                        [class.is-invalid]="datasetForm.get('layer')?.invalid && datasetForm.get('layer')?.touched">
+                                    <option value="">Select layer</option>
+                                    <option *ngFor="let layer of layers" [value]="layer">{{ layer }}</option>
+                                </select>
+                                <div class="invalid-feedback" *ngIf="datasetForm.get('layer')?.invalid && datasetForm.get('layer')?.touched">
+                                    Please select a layer.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="create_status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select class="form-select" id="create_status" formControlName="status"
+                                        [class.is-invalid]="datasetForm.get('status')?.invalid && datasetForm.get('status')?.touched">
+                                    <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="create_dependencies" class="form-label">Upstream Dependencies (comma-separated IDs)</label>
+                                <input type="text" class="form-control" id="create_dependencies" 
+                                       placeholder="e.g., dep1, dep2, dep3"
+                                       (blur)="onDependenciesBlur($event)">
+                                <small class="form-text text-muted">Enter dataset IDs separated by commas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="formLoading">Cancel</button>
+                    <button type="submit" class="btn btn-primary" [disabled]="formLoading || datasetForm.invalid">
+                        <span *ngIf="!formLoading">Create</span>
+                        <span *ngIf="formLoading">
+                            <span class="spinner-border spinner-border-sm me-2"></span>Creating...
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Dataset Modal -->
+    <div class="modal-overlay" *ngIf="showEditModal" (click)="closeModals()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Dataset</h3>
+                <button type="button" class="btn-close" (click)="closeModals()" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <form [formGroup]="datasetForm" (ngSubmit)="onUpdateSubmit()">
+                <div class="modal-body">
+                    <div *ngIf="formError" class="alert alert-danger">
+                        {{ formError }}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-col">
+                            <div class="mb-3">
+                                <label for="edit_dataset_id" class="form-label">Dataset ID</label>
+                                <input type="text" class="form-control" id="edit_dataset_id" formControlName="dataset_id" [attr.disabled]="true" readonly>
+                                <small class="form-text text-muted">Dataset ID cannot be changed</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_dataset_name" class="form-label">Dataset Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_dataset_name" formControlName="dataset_name"
+                                       [class.is-invalid]="datasetForm.get('dataset_name')?.invalid && datasetForm.get('dataset_name')?.touched">
+                                <div class="invalid-feedback" *ngIf="datasetForm.get('dataset_name')?.invalid && datasetForm.get('dataset_name')?.touched">
+                                    Dataset name is required and must be at least 3 characters.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_dataset_type" class="form-label">Dataset Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_dataset_type" formControlName="dataset_type"
+                                        [class.is-invalid]="datasetForm.get('dataset_type')?.invalid && datasetForm.get('dataset_type')?.touched">
+                                    <option value="">Select type</option>
+                                    <option *ngFor="let type of datasetTypes" [value]="type">{{ type }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-col">
+                            <div class="mb-3">
+                                <label for="edit_layer" class="form-label">Layer <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_layer" formControlName="layer"
+                                        [class.is-invalid]="datasetForm.get('layer')?.invalid && datasetForm.get('layer')?.touched">
+                                    <option value="">Select layer</option>
+                                    <option *ngFor="let layer of layers" [value]="layer">{{ layer }}</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select class="form-select" id="edit_status" formControlName="status">
+                                    <option *ngFor="let status of statuses" [value]="status">{{ status }}</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="edit_dependencies" class="form-label">Upstream Dependencies (comma-separated IDs)</label>
+                                <input type="text" class="form-control" id="edit_dependencies" 
+                                       [value]="(datasetForm.get('upstream_dependencies')?.value || []).join(', ')"
+                                       (blur)="onDependenciesBlur($event)">
+                                <small class="form-text text-muted">Enter dataset IDs separated by commas</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="formLoading">Cancel</button>
+                    <button type="submit" class="btn btn-primary" [disabled]="formLoading || datasetForm.invalid">
+                        <span *ngIf="!formLoading">Update</span>
+                        <span *ngIf="formLoading">
+                            <span class="spinner-border spinner-border-sm me-2"></span>Updating...
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModals()">
+        <div class="modal-content modal-content-small" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Delete Dataset</h3>
+                <button type="button" class="btn-close" (click)="closeModals()" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div *ngIf="formError" class="alert alert-danger">
+                    {{ formError }}
+                </div>
+                <p>Are you sure you want to delete the dataset <strong>{{ selectedDataset?.dataset_name }}</strong>?</p>
+                <p class="text-muted small">Dataset ID: {{ selectedDataset?.dataset_id }}</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="formLoading">Cancel</button>
+                <button type="button" class="btn btn-danger" (click)="onDeleteConfirm()" [disabled]="formLoading">
+                    <span *ngIf="!formLoading">Delete</span>
+                    <span *ngIf="formLoading">
+                        <span class="spinner-border spinner-border-sm me-2"></span>Deleting...
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
 </div>

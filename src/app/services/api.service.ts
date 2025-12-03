@@ -48,7 +48,7 @@ export interface DatasetsResponse {
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:5001/api';
+  private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
