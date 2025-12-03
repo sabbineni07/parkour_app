@@ -1,6 +1,6 @@
 import {Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef} from '@angular/core';
 import {CommonModule, KeyValuePipe} from '@angular/common';
-import {FormBuilder, FormGroup, Validators, ReactiveFormsModule} from '@angular/forms';
+import {FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule} from '@angular/forms';
 import {jqxTabsModule, jqxTabsComponent} from 'jqwidgets-ng/jqxtabs';
 import {jqxGridModule, jqxGridComponent} from 'jqwidgets-ng/jqxgrid';
 import {ApiService, Dataset} from '../../services/api.service';
@@ -17,7 +17,7 @@ declare var jqwidgets: any;
 @Component({
     selector: 'app-datasets',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, jqxTabsModule, jqxGridModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule, jqxTabsModule, jqxGridModule],
     templateUrl: './datasets.component.html',
     styleUrls: ['./datasets.component.css']
 })
@@ -57,6 +57,8 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
         { value: 'RL', label: 'Right to Left', icon: 'bi-arrow-left' },
         { value: 'BT', label: 'Bottom to Top', icon: 'bi-arrow-up' }
     ];
+    dagSearchTerm = '';
+    filteredDatasetsForDAG: Dataset[] = [];
 
     gridColumns: any[] = [];
 
@@ -187,6 +189,7 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.refreshGrid();
                 // Build DAG after data is loaded
                 setTimeout(() => {
+                    this.filterDatasetsForDAG(); // Initialize filtered datasets
                     this.buildDAG();
                 }, 100);
             },
@@ -211,7 +214,7 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     getHeight(): any {
         // Use available height minus header and padding
-        return 'calc(100vh - 150px)';
+        return 'calc(100vh - 100px)';
     }
 
     getMinHeight(): any {
@@ -255,6 +258,17 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
         
+        // Filter datasets based on search term
+        this.filterDatasetsForDAG();
+        
+        if (this.filteredDatasetsForDAG.length === 0) {
+            if (this.cy) {
+                this.cy.destroy();
+                this.cy = undefined;
+            }
+            return;
+        }
+        
         // Wait for view to be ready
         setTimeout(() => {
             if (!this.dagContainer || !this.dagContainer.nativeElement) {
@@ -270,8 +284,8 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
             const nodes: any[] = [];
             const edges: any[] = [];
             
-            // Create nodes
-            this.datasets.forEach(dataset => {
+            // Create nodes from filtered datasets
+            this.filteredDatasetsForDAG.forEach(dataset => {
                 const layer = dataset.layer?.toLowerCase() || 'other';
                 let nodeColor = '#003087'; // default navy
                 
@@ -279,16 +293,21 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                 else if (layer === 'silver') nodeColor = '#C0C0C0';
                 else if (layer === 'gold') nodeColor = '#FFD700';
                 
+                // Get the last word from dataset name for display
+                const fullName = dataset.dataset_name || dataset.dataset_id;
+                const displayName = this.getLastWord(fullName);
+                
                 nodes.push({
                     data: {
                         id: dataset.dataset_id,
-                        label: dataset.dataset_name || dataset.dataset_id,
+                        label: displayName,
+                        fullName: fullName, // Store full name for tooltip
                         dataset: dataset,
                         layer: layer
                     },
                     style: {
                         'background-color': nodeColor,
-                        'label': dataset.dataset_name || dataset.dataset_id,
+                        'label': displayName,
                         'width': 60,
                         'height': 60,
                         'shape': 'ellipse',
@@ -303,12 +322,12 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                 });
             });
             
-            // Create edges (dependencies)
-            this.datasets.forEach(dataset => {
+            // Create edges (dependencies) - only show edges between filtered datasets
+            this.filteredDatasetsForDAG.forEach(dataset => {
                 if (dataset.upstream_dependencies && dataset.upstream_dependencies.length > 0) {
                     dataset.upstream_dependencies.forEach(depId => {
-                        // Check if dependency exists in our datasets
-                        const depExists = this.datasets.some(ds => ds.dataset_id === depId);
+                        // Check if dependency exists in filtered datasets
+                        const depExists = this.filteredDatasetsForDAG.some(ds => ds.dataset_id === depId);
                         if (depExists) {
                             edges.push({
                                 data: {
@@ -387,15 +406,48 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
                 }
             });
             
-            // Add hover effects
+            // Add hover effects and tooltip
+            let tooltipElement: HTMLElement | null = null;
+            
             this.cy.on('mouseover', 'node', (evt: any) => {
+                const node = evt.target;
                 evt.target.style('width', 80);
                 evt.target.style('height', 80);
+                
+                // Show tooltip with full name
+                const fullName = node.data('fullName') || node.data('label');
+                const datasetId = node.data('id');
+                
+                // Remove existing tooltip if any
+                if (tooltipElement && tooltipElement.parentNode) {
+                    tooltipElement.parentNode.removeChild(tooltipElement);
+                }
+                
+                tooltipElement = document.createElement('div');
+                tooltipElement.className = 'dag-tooltip';
+                tooltipElement.innerHTML = `<strong>${fullName}</strong><br><small>ID: ${datasetId}</small>`;
+                document.body.appendChild(tooltipElement);
+            });
+            
+            this.cy.on('mousemove', 'node', (evt: any) => {
+                if (tooltipElement) {
+                    const mouseEvent = evt.originalEvent as MouseEvent;
+                    if (mouseEvent) {
+                        tooltipElement.style.left = (mouseEvent.pageX + 10) + 'px';
+                        tooltipElement.style.top = (mouseEvent.pageY + 10) + 'px';
+                    }
+                }
             });
             
             this.cy.on('mouseout', 'node', (evt: any) => {
                 evt.target.style('width', 60);
                 evt.target.style('height', 60);
+                
+                // Remove tooltip
+                if (tooltipElement && tooltipElement.parentNode) {
+                    tooltipElement.parentNode.removeChild(tooltipElement);
+                    tooltipElement = null;
+                }
             });
             
             this.dagInitialized = true;
@@ -437,6 +489,76 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.cy) {
             this.cy.fit();
         }
+    }
+    
+    filterDatasetsForDAG(): void {
+        if (!this.dagSearchTerm || this.dagSearchTerm.trim() === '') {
+            // No search term - show all datasets
+            this.filteredDatasetsForDAG = [...this.datasets];
+            return;
+        }
+        
+        const searchLower = this.dagSearchTerm.toLowerCase().trim();
+        
+        // Filter datasets that match the search term
+        this.filteredDatasetsForDAG = this.datasets.filter(dataset => {
+            // Search in dataset_id, dataset_name, dataset_type, layer, status
+            return (
+                dataset.dataset_id?.toLowerCase().includes(searchLower) ||
+                dataset.dataset_name?.toLowerCase().includes(searchLower) ||
+                dataset.dataset_type?.toLowerCase().includes(searchLower) ||
+                dataset.layer?.toLowerCase().includes(searchLower) ||
+                dataset.status?.toLowerCase().includes(searchLower)
+            );
+        });
+        
+        // Also include datasets that are dependencies of filtered datasets
+        const dependencyIds = new Set<string>();
+        this.filteredDatasetsForDAG.forEach(dataset => {
+            if (dataset.upstream_dependencies) {
+                dataset.upstream_dependencies.forEach(depId => {
+                    dependencyIds.add(depId);
+                });
+            }
+        });
+        
+        // Add dependency datasets if they're not already in the filtered list
+        dependencyIds.forEach(depId => {
+            const depDataset = this.datasets.find(ds => ds.dataset_id === depId);
+            if (depDataset && !this.filteredDatasetsForDAG.some(ds => ds.dataset_id === depId)) {
+                this.filteredDatasetsForDAG.push(depDataset);
+            }
+        });
+    }
+    
+    onDAGSearchChange(): void {
+        this.buildDAG();
+    }
+    
+    clearDAGSearch(): void {
+        this.dagSearchTerm = '';
+        this.buildDAG();
+    }
+    
+    getLastWord(text: string): string {
+        if (!text) return '';
+        const trimmed = text.trim();
+        
+        // Check if it's a path (contains /)
+        if (trimmed.includes('/')) {
+            const parts = trimmed.split('/');
+            return parts.length > 0 ? parts[parts.length - 1] : trimmed;
+        }
+        
+        // Check if it's dot-separated (contains .)
+        if (trimmed.includes('.')) {
+            const parts = trimmed.split('.');
+            return parts.length > 0 ? parts[parts.length - 1] : trimmed;
+        }
+        
+        // Fallback to space-separated words
+        const words = trimmed.split(/\s+/);
+        return words.length > 0 ? words[words.length - 1] : trimmed;
     }
     
     ngOnDestroy(): void {

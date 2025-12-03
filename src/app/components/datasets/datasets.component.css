@@ -897,6 +897,22 @@
   flex-direction: column;
 }
 
+.dag-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dag-search .input-group {
+  max-width: 600px;
+}
+
+.dag-search-info {
+  font-size: 13px;
+  color: var(--navy-text-light);
+  margin-left: 40px;
+}
+
 .dag-controls {
   display: flex;
   align-items: center;
@@ -963,6 +979,31 @@
   height: 100%;
   min-height: 600px;
   color: var(--navy-text-light);
+}
+
+/* DAG Tooltip */
+.dag-tooltip {
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 10000;
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+.dag-tooltip strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.dag-tooltip small {
+  color: #ccc;
+  font-size: 11px;
 }
 
 .dag-legend {

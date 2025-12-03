@@ -259,6 +259,29 @@
                         <p class="mt-3 text-muted">No datasets found. Create datasets to visualize the DAG.</p>
                     </div>
                     <div *ngIf="datasets.length > 0" class="dag-container">
+                        <div class="dag-search mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       placeholder="Search datasets by ID, name, type, layer, or status..."
+                                       [(ngModel)]="dagSearchTerm"
+                                       (ngModelChange)="onDAGSearchChange()"
+                                       (keyup.enter)="onDAGSearchChange()">
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        (click)="clearDAGSearch()"
+                                        *ngIf="dagSearchTerm"
+                                        title="Clear search">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="dag-search-info" *ngIf="dagSearchTerm">
+                                Showing <strong>{{ filteredDatasetsForDAG.length }}</strong> of <strong>{{ datasets.length }}</strong> datasets
+                            </div>
+                        </div>
                         <div class="dag-controls mb-3">
                             <div class="dag-control-group">
                                 <label class="dag-control-label">Layout Direction:</label>
@@ -289,14 +312,21 @@
                                 </button>
                             </div>
                             <span class="dag-info ms-3">
-                                <strong>{{ datasets.length }}</strong> datasets, 
-                                <strong>{{ getTotalDependencies() }}</strong> dependencies
+                                <strong>{{ filteredDatasetsForDAG.length || datasets.length }}</strong> datasets shown, 
+                                <strong>{{ getTotalDependencies() }}</strong> total dependencies
                             </span>
                         </div>
                         <div class="dag-cytoscape-container" #dagContainer>
                             <div *ngIf="datasets.length === 0" class="dag-empty-state">
                                 <i class="bi bi-diagram-3" style="font-size: 48px; color: var(--navy-text-light);"></i>
                                 <p class="mt-3 text-muted">No datasets to visualize</p>
+                            </div>
+                            <div *ngIf="datasets.length > 0 && filteredDatasetsForDAG.length === 0 && dagSearchTerm" class="dag-empty-state">
+                                <i class="bi bi-search" style="font-size: 48px; color: var(--navy-text-light);"></i>
+                                <p class="mt-3 text-muted">No datasets match your search criteria</p>
+                                <button class="btn btn-sm btn-outline-primary mt-2" (click)="clearDAGSearch()">
+                                    Clear Search
+                                </button>
                             </div>
                         </div>
                         <div class="dag-legend mt-3">
