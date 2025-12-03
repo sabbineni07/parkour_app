@@ -54,6 +54,16 @@
                             </div>
                         </div>
                     </li>
+                    <li>
+                        <div style="height: 20px; margin-top: 5px;">
+                            <div style="float: left; margin-right: 8px;">
+                                <i class="bi bi-diagram-3" style="font-size: 16px;"></i>
+                            </div>
+                            <div style="vertical-align: middle; text-align: center; float: left;">
+                                DAG
+                            </div>
+                        </div>
+                    </li>
                 </ul>
 
                 <!-- Grid View Tab Content -->
@@ -237,6 +247,74 @@
                                         <i class="bi bi-trash me-1"></i>Delete
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DAG View Tab Content -->
+                <div style="overflow: hidden; padding: 10px;">
+                    <div *ngIf="datasets.length === 0" class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 48px; color: var(--navy-text-light);"></i>
+                        <p class="mt-3 text-muted">No datasets found. Create datasets to visualize the DAG.</p>
+                    </div>
+                    <div *ngIf="datasets.length > 0" class="dag-container">
+                        <div class="dag-controls mb-3">
+                            <div class="dag-control-group">
+                                <label class="dag-control-label">Layout Direction:</label>
+                                <div class="btn-group" role="group">
+                                    <button *ngFor="let dir of layoutDirections" 
+                                            type="button" 
+                                            class="btn btn-sm"
+                                            [class.btn-primary]="dagLayoutDirection === dir.value"
+                                            [class.btn-outline-secondary]="dagLayoutDirection !== dir.value"
+                                            (click)="changeDAGLayoutDirection(dir.value)"
+                                            [title]="dir.label">
+                                        <i [class]="'bi ' + dir.icon + ' me-1'"></i>{{ dir.label }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="dag-control-group">
+                                <button class="btn btn-sm btn-outline-primary" (click)="resetDAGLayout()">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Reset Layout
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" (click)="zoomInDAG()">
+                                    <i class="bi bi-zoom-in me-1"></i>Zoom In
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" (click)="zoomOutDAG()">
+                                    <i class="bi bi-zoom-out me-1"></i>Zoom Out
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" (click)="fitDAG()">
+                                    <i class="bi bi-arrows-angle-contract me-1"></i>Fit to Screen
+                                </button>
+                            </div>
+                            <span class="dag-info ms-3">
+                                <strong>{{ datasets.length }}</strong> datasets, 
+                                <strong>{{ getTotalDependencies() }}</strong> dependencies
+                            </span>
+                        </div>
+                        <div class="dag-cytoscape-container" #dagContainer>
+                            <div *ngIf="datasets.length === 0" class="dag-empty-state">
+                                <i class="bi bi-diagram-3" style="font-size: 48px; color: var(--navy-text-light);"></i>
+                                <p class="mt-3 text-muted">No datasets to visualize</p>
+                            </div>
+                        </div>
+                        <div class="dag-legend mt-3">
+                            <div class="legend-item">
+                                <span class="legend-color bronze"></span>
+                                <span>Bronze Layer</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color silver"></span>
+                                <span>Silver Layer</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color gold"></span>
+                                <span>Gold Layer</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color other"></span>
+                                <span>Other</span>
                             </div>
                         </div>
                     </div>

@@ -1,9 +1,15 @@
-import {Component, OnInit, AfterViewInit, OnDestroy, ViewChild} from '@angular/core';
+import {Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef} from '@angular/core';
 import {CommonModule, KeyValuePipe} from '@angular/common';
 import {FormBuilder, FormGroup, Validators, ReactiveFormsModule} from '@angular/forms';
 import {jqxTabsModule, jqxTabsComponent} from 'jqwidgets-ng/jqxtabs';
 import {jqxGridModule, jqxGridComponent} from 'jqwidgets-ng/jqxgrid';
 import {ApiService, Dataset} from '../../services/api.service';
+import cytoscape from 'cytoscape';
+// @ts-ignore - cytoscape-dagre doesn't have type definitions
+import dagre from 'cytoscape-dagre';
+
+// Register dagre layout extension
+cytoscape.use(dagre);
 
 declare var jqx: any;
 declare var jqwidgets: any;
@@ -15,7 +21,7 @@ declare var jqwidgets: any;
     templateUrl: './datasets.component.html',
     styleUrls: ['./datasets.component.css']
 })
-export class DatasetsComponent implements OnInit, AfterViewInit {
+export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('datasetsGrid') datasetsGrid?: jqxGridComponent;
     
     datasets: Dataset[] = [];
@@ -39,6 +45,18 @@ export class DatasetsComponent implements OnInit, AfterViewInit {
     datasetTypes = ['delta', 'adls', 'parquet', 'csv', 'json'];
     layers = ['bronze', 'silver', 'gold'];
     statuses = ['active', 'inactive', 'pending'];
+    
+    // DAG visualization properties
+    @ViewChild('dagContainer', { static: false }) dagContainer?: ElementRef;
+    cy?: cytoscape.Core;
+    dagInitialized = false;
+    dagLayoutDirection: 'TB' | 'LR' | 'BT' | 'RL' = 'LR'; // Default to Left-to-Right
+    layoutDirections: Array<{ value: 'TB' | 'LR' | 'BT' | 'RL'; label: string; icon: string }> = [
+        { value: 'LR', label: 'Left to Right', icon: 'bi-arrow-right' },
+        { value: 'TB', label: 'Top to Bottom', icon: 'bi-arrow-down' },
+        { value: 'RL', label: 'Right to Left', icon: 'bi-arrow-left' },
+        { value: 'BT', label: 'Bottom to Top', icon: 'bi-arrow-up' }
+    ];
 
     gridColumns: any[] = [];
 
@@ -167,6 +185,10 @@ export class DatasetsComponent implements OnInit, AfterViewInit {
                 this.isLoading = false;
 
                 this.refreshGrid();
+                // Build DAG after data is loaded
+                setTimeout(() => {
+                    this.buildDAG();
+                }, 100);
             },
             error: (error) => {
                 this.isLoading = false;
@@ -219,15 +241,208 @@ export class DatasetsComponent implements OnInit, AfterViewInit {
         };
         this.datasetsDataAdapter = new jqx.dataAdapter(this.datasetsSource);
         
-        // // Recreate data adapter with new data
-        // if (typeof jqx !== 'undefined' && jqx.dataAdapter) {
-        //     this.datasetsDataAdapter = new jqx.dataAdapter(this.datasetsSource);
-        // }
-        //
-        // // Re-setup event handlers after grid refresh
-        // setTimeout(() => {
-        //     this.setupGridEventHandlers();
-        // }, 100);
+        // Update DAG visualization
+        this.buildDAG();
+    }
+    
+    // DAG Visualization Methods using Cytoscape
+    buildDAG(): void {
+        if (!this.datasets || this.datasets.length === 0) {
+            if (this.cy) {
+                this.cy.destroy();
+                this.cy = undefined;
+            }
+            return;
+        }
+        
+        // Wait for view to be ready
+        setTimeout(() => {
+            if (!this.dagContainer || !this.dagContainer.nativeElement) {
+                return;
+            }
+            
+            // Destroy existing instance if any
+            if (this.cy) {
+                this.cy.destroy();
+            }
+            
+            // Prepare nodes and edges for Cytoscape
+            const nodes: any[] = [];
+            const edges: any[] = [];
+            
+            // Create nodes
+            this.datasets.forEach(dataset => {
+                const layer = dataset.layer?.toLowerCase() || 'other';
+                let nodeColor = '#003087'; // default navy
+                
+                if (layer === 'bronze') nodeColor = '#CD7F32';
+                else if (layer === 'silver') nodeColor = '#C0C0C0';
+                else if (layer === 'gold') nodeColor = '#FFD700';
+                
+                nodes.push({
+                    data: {
+                        id: dataset.dataset_id,
+                        label: dataset.dataset_name || dataset.dataset_id,
+                        dataset: dataset,
+                        layer: layer
+                    },
+                    style: {
+                        'background-color': nodeColor,
+                        'label': dataset.dataset_name || dataset.dataset_id,
+                        'width': 60,
+                        'height': 60,
+                        'shape': 'ellipse',
+                        'border-width': 2,
+                        'border-color': '#000',
+                        'font-size': '12px',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '80px'
+                    }
+                });
+            });
+            
+            // Create edges (dependencies)
+            this.datasets.forEach(dataset => {
+                if (dataset.upstream_dependencies && dataset.upstream_dependencies.length > 0) {
+                    dataset.upstream_dependencies.forEach(depId => {
+                        // Check if dependency exists in our datasets
+                        const depExists = this.datasets.some(ds => ds.dataset_id === depId);
+                        if (depExists) {
+                            edges.push({
+                                data: {
+                                    id: `${depId}-${dataset.dataset_id}`,
+                                    source: depId,
+                                    target: dataset.dataset_id
+                                },
+                                style: {
+                                    'width': 2,
+                                    'line-color': '#666',
+                                    'target-arrow-color': '#666',
+                                    'target-arrow-shape': 'triangle',
+                                    'curve-style': 'bezier',
+                                    'arrow-scale': 1.5
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Initialize Cytoscape
+            this.cy = cytoscape({
+                container: this.dagContainer.nativeElement,
+                elements: [...nodes, ...edges],
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'text-outline-width': 2,
+                            'text-outline-color': '#fff'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#666',
+                            'target-arrow-color': '#666',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier'
+                        }
+                    },
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'border-width': 4,
+                            'border-color': '#0066CC'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'dagre',
+                    // @ts-ignore - dagre layout options
+                    rankDir: this.dagLayoutDirection,
+                    spacingFactor: 1.5,
+                    nodeSep: 50,
+                    edgeSep: 20,
+                    rankSep: 80
+                } as any,
+                userPanningEnabled: true,
+                userZoomingEnabled: true,
+                boxSelectionEnabled: true,
+                autounselectify: false,
+                minZoom: 0.1,
+                maxZoom: 2
+            });
+            
+            // Add click handler for nodes
+            this.cy.on('tap', 'node', (evt: any) => {
+                const node = evt.target;
+                const dataset = node.data('dataset');
+                if (dataset) {
+                    this.openEditModal(dataset);
+                }
+            });
+            
+            // Add hover effects
+            this.cy.on('mouseover', 'node', (evt: any) => {
+                evt.target.style('width', 80);
+                evt.target.style('height', 80);
+            });
+            
+            this.cy.on('mouseout', 'node', (evt: any) => {
+                evt.target.style('width', 60);
+                evt.target.style('height', 60);
+            });
+            
+            this.dagInitialized = true;
+        }, 100);
+    }
+    
+    resetDAGLayout(): void {
+        if (this.cy) {
+            this.cy.layout({
+                name: 'dagre',
+                // @ts-ignore - dagre layout options
+                rankDir: this.dagLayoutDirection,
+                spacingFactor: 1.5,
+                nodeSep: 50,
+                edgeSep: 20,
+                rankSep: 80
+            } as any).run();
+        }
+    }
+    
+    changeDAGLayoutDirection(direction: 'TB' | 'LR' | 'BT' | 'RL'): void {
+        this.dagLayoutDirection = direction;
+        this.resetDAGLayout();
+    }
+    
+    zoomInDAG(): void {
+        if (this.cy) {
+            this.cy.zoom(this.cy.zoom() * 1.2);
+        }
+    }
+    
+    zoomOutDAG(): void {
+        if (this.cy) {
+            this.cy.zoom(this.cy.zoom() / 1.2);
+        }
+    }
+    
+    fitDAG(): void {
+        if (this.cy) {
+            this.cy.fit();
+        }
+    }
+    
+    ngOnDestroy(): void {
+        if (this.cy) {
+            this.cy.destroy();
+        }
     }
 
     // Render actions column with delete button

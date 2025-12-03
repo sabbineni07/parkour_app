@@ -888,3 +888,126 @@
   }
 }
 
+/* DAG Visualization Styles using Cytoscape */
+.dag-container {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dag-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background-color: var(--navy-bg);
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.dag-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dag-control-label {
+  font-weight: 500;
+  color: var(--navy-text);
+  font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.btn-group {
+  display: flex;
+  gap: 0;
+}
+
+.btn-group .btn {
+  border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.dag-info {
+  color: var(--navy-text);
+  font-size: 14px;
+}
+
+.dag-cytoscape-container {
+  flex: 1;
+  border: 1px solid var(--navy-border);
+  border-radius: 4px;
+  background-color: var(--navy-white);
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dag-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 600px;
+  color: var(--navy-text-light);
+}
+
+.dag-legend {
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+  background-color: var(--navy-bg);
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--navy-text);
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: inline-block;
+}
+
+.legend-color.bronze {
+  background-color: #CD7F32;
+  border-color: #8B4513;
+}
+
+.legend-color.silver {
+  background-color: #C0C0C0;
+  border-color: #808080;
+}
+
+.legend-color.gold {
+  background-color: #FFD700;
+  border-color: #DAA520;
+}
+
+.legend-color.other {
+  background-color: var(--navy-white);
+  border-color: var(--navy-primary);
+}
+
+
