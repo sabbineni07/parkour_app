@@ -4,6 +4,8 @@ import {FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule} fr
 import {jqxTabsModule, jqxTabsComponent} from 'jqwidgets-ng/jqxtabs';
 import {jqxGridModule, jqxGridComponent} from 'jqwidgets-ng/jqxgrid';
 import {ApiService, Dataset} from '../../services/api.service';
+import {forkJoin, of} from 'rxjs';
+import {catchError} from 'rxjs/operators';
 import cytoscape from 'cytoscape';
 // @ts-ignore - cytoscape-dagre doesn't have type definitions
 import dagre from 'cytoscape-dagre';
@@ -36,10 +38,19 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
     showCreateModal = false;
     showEditModal = false;
     showDeleteModal = false;
+    showImportModal = false;
     selectedDataset: Dataset | null = null;
     datasetForm: FormGroup;
     formError = '';
     formLoading = false;
+    
+    // CSV Import states
+    importFile: File | null = null;
+    importPreview: any[] = [];
+    importLoading = false;
+    importError = '';
+    importSuccess = false;
+    importResults: { success: number; failed: number; errors: string[] } = { success: 0, failed: 0, errors: [] };
     
     // Available options for dropdowns
     datasetTypes = ['delta', 'adls', 'parquet', 'csv', 'json'];
@@ -105,26 +116,26 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
     initializeGridColumns(): void {
         try {
             this.gridColumns = [
-                {text: 'ID', datafield: 'dataset_id', width: 300},
-                {text: 'Name', datafield: 'dataset_name', width: 200},
-                {text: 'Type', datafield: 'dataset_type', width: 100},
-                {text: 'Layer', datafield: 'layer', width: 100},
-                {text: 'Dependencies', datafield: 'dependencies', width: 300},
-                {text: 'Status', datafield: 'status', width: 120},
+                {text: 'ID', datafield: 'dataset_id', minwidth: 200, pinned: false},
+                {text: 'Name', datafield: 'dataset_name', minwidth: 150, pinned: false},
+                {text: 'Type', datafield: 'dataset_type', minwidth: 80, pinned: false},
+                {text: 'Layer', datafield: 'layer', minwidth: 80, pinned: false},
+                {text: 'Dependencies', datafield: 'dependencies', minwidth: 150, pinned: false},
+                {text: 'Status', datafield: 'status', minwidth: 100, pinned: false},
                 // {text: 'Created On', datafield: 'created_ts', width: 120, cellsformat: 'd'},
                 // {text: 'Updated On', datafield: 'updated_ts', width: 120, cellsformat: 'd'},
-                {text: 'Actions', datafield: 'actions', width: 100, cellsrenderer: this.actionsRenderer.bind(this), sortable: false, filterable: false}
+                {text: 'Actions', datafield: 'actions', minwidth: 80, pinned: false, cellsrenderer: this.actionsRenderer.bind(this), sortable: false, filterable: false}
             ];
         } catch (error) {
             console.error('Error initializing grid columns:', error);
             // Fallback to columns without actions if there's an error
             this.gridColumns = [
-                {text: 'ID', datafield: 'dataset_id', width: 300},
-                {text: 'Name', datafield: 'dataset_name', width: 200},
-                {text: 'Type', datafield: 'dataset_type', width: 100},
-                {text: 'Layer', datafield: 'layer', width: 100},
-                {text: 'Dependencies', datafield: 'dependencies', width: 300},
-                {text: 'Status', datafield: 'status', width: 130},
+                {text: 'ID', datafield: 'dataset_id', minwidth: 200, pinned: false},
+                {text: 'Name', datafield: 'dataset_name', minwidth: 150, pinned: false},
+                {text: 'Type', datafield: 'dataset_type', minwidth: 80, pinned: false},
+                {text: 'Layer', datafield: 'layer', minwidth: 80, pinned: false},
+                {text: 'Dependencies', datafield: 'dependencies', minwidth: 150, pinned: false},
+                {text: 'Status', datafield: 'status', minwidth: 100, pinned: false},
                 // {text: 'Created On', datafield: 'created_ts', width: 120, cellsformat: 'd'},
                 // {text: 'Updated On', datafield: 'updated_ts', width: 120, cellsformat: 'd'}
             ];
@@ -132,22 +143,42 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     ngAfterViewInit() {
-        // Initialize data adapter after view is initialized and jqx is available
-        // try {
-        //     if (typeof jqx !== 'undefined' && jqx.dataAdapter) {
-        //         this.datasetsDataAdapter = new jqx.dataAdapter(this.datasetsSource);
-        //     }
-        //
-        //     // Set up event handlers for grid actions after view init
+        // // Auto-size columns after grid is rendered and window is resized
+        // setTimeout(() => {
+        //     this.autoSizeGridColumns();
+        // }, 300);
+        
+        // // Recalculate on window resize
+        // this.resizeHandler = () => {
         //     setTimeout(() => {
-        //         this.setupGridEventHandlers();
+        //         this.autoSizeGridColumns();
         //     }, 100);
-        // } catch (error) {
-        //     console.error('Error initializing grid:', error);
-        //     this.isLoading = false;
-        //     this.errorMessage = 'Error initializing grid. Please refresh the page.';
-        // }
+        // };
+        // window.addEventListener('resize', this.resizeHandler);
     }
+    
+    // autoSizeGridColumns(): void {
+    //     if (this.datasetsGrid) {
+    //         try {
+    //             // Access the underlying jqxGrid instance
+    //             const gridElement = document.querySelector('jqx-grid');
+    //             if (gridElement) {
+    //                 const jqxGridInstance = (gridElement as any).jqxGrid;
+    //                 if (jqxGridInstance && typeof jqxGridInstance.autosizecolumns === 'function') {
+    //                     jqxGridInstance.autosizecolumns();
+    //                 } else if (jqxGridInstance && typeof jqxGridInstance.autosizecolumn === 'function') {
+    //                     // Try alternative method name
+    //                     jqxGridInstance.autosizecolumn('dataset_id');
+    //                     jqxGridInstance.autosizecolumn('dataset_name');
+    //                     jqxGridInstance.autosizecolumn('dependencies');
+    //                 }
+    //             }
+    //         } catch (error) {
+    //             // Silently fail - columns will use their minwidth/width settings
+    //             console.log('Auto-size not available, using configured widths');
+    //         }
+    //     }
+    // }
 
 
     // setupGridEventHandlers(): void {
@@ -589,10 +620,17 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
         return div.innerHTML;
     }
     
+    // private resizeHandler?: () => void;
+    
     ngOnDestroy(): void {
         if (this.cy) {
             this.cy.destroy();
         }
+        
+        // // Remove resize listener
+        // if (this.resizeHandler) {
+        //     window.removeEventListener('resize', this.resizeHandler);
+        // }
     }
 
     // Render actions column with delete button
@@ -771,11 +809,294 @@ export class DatasetsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.showCreateModal = false;
         this.showEditModal = false;
         this.showDeleteModal = false;
+        this.showImportModal = false;
         this.selectedDataset = null;
         this.formError = '';
         // Re-enable dataset_id field when closing modal
         this.datasetForm.get('dataset_id')?.enable();
         this.datasetForm.reset();
+        
+        // Reset import state
+        this.importFile = null;
+        this.importPreview = [];
+        this.importError = '';
+        this.importSuccess = false;
+        this.importResults = { success: 0, failed: 0, errors: [] };
+    }
+    
+    openImportModal() {
+        this.showImportModal = true;
+        this.importError = '';
+        this.importSuccess = false;
+        this.importFile = null;
+        this.importPreview = [];
+    }
+    
+    downloadCSVTemplate() {
+        // Create CSV template with headers and sample data with valid UUIDs
+        const headers = ['dataset_id', 'dataset_name', 'dataset_type', 'layer', 'status', 'upstream_dependencies'];
+        const uuid1 = this.generateUUID();
+        const uuid2 = this.generateUUID();
+        const uuid3 = this.generateUUID();
+        
+        const sampleRows = [
+            [uuid1, 'adls://bronze/customer/raw_customer_data', 'adls', 'bronze', 'active', ''],
+            [uuid2, 'uc.bronze.customer_cleaned', 'delta', 'bronze', 'active', uuid1],
+            [uuid3, 'adls://silver/sales/monthly_sales', 'adls', 'silver', 'active', `${uuid1},${uuid2}`]
+        ];
+        
+        const csvContent = [
+            headers.join(','),
+            ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'datasets_template.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    onFileSelected(event: any) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                this.importError = 'Please select a valid CSV file.';
+                return;
+            }
+            
+            this.importFile = file;
+            this.importError = '';
+            this.parseCSVFile(file);
+        }
+    }
+    
+    parseCSVFile(file: File) {
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+            try {
+                const csv = e.target.result;
+                const lines = csv.split('\n').filter((line: string) => line.trim() !== '');
+                
+                if (lines.length < 2) {
+                    this.importError = 'CSV file must contain at least a header row and one data row.';
+                    return;
+                }
+                
+                // Parse header
+                const headers = this.parseCSVLine(lines[0]);
+                
+                // Validate headers
+                const requiredHeaders = ['dataset_id', 'dataset_name', 'dataset_type', 'layer', 'status'];
+                const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+                if (missingHeaders.length > 0) {
+                    this.importError = `Missing required columns: ${missingHeaders.join(', ')}`;
+                    return;
+                }
+                
+                // Parse data rows with validation
+                this.importPreview = [];
+                const validationErrors: string[] = [];
+                const datasetIds: string[] = [];
+                
+                // First pass: collect all dataset IDs and validate basic structure
+                for (let i = 1; i < lines.length; i++) {
+                    const values = this.parseCSVLine(lines[i]);
+                    if (values.length !== headers.length) {
+                        validationErrors.push(`Row ${i + 1}: Column count mismatch. Expected ${headers.length} columns, found ${values.length}.`);
+                        continue;
+                    }
+                    
+                    const row: any = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index]?.trim() || '';
+                    });
+                    
+                    // Validate required fields
+                    const rowErrors: string[] = [];
+                    
+                    // Check required fields are not null/empty
+                    if (!row.dataset_id) {
+                        rowErrors.push('dataset_id is required');
+                    } else {
+                        // Validate UUID format
+                        if (!this.isValidUUID(row.dataset_id)) {
+                            rowErrors.push('dataset_id must be a valid UUID format');
+                        } else {
+                            datasetIds.push(row.dataset_id);
+                        }
+                    }
+                    
+                    if (!row.dataset_name) {
+                        rowErrors.push('dataset_name is required');
+                    }
+                    
+                    if (!row.dataset_type) {
+                        rowErrors.push('dataset_type is required');
+                    }
+                    
+                    if (!row.layer) {
+                        rowErrors.push('layer is required');
+                    }
+                    
+                    if (!row.status) {
+                        rowErrors.push('status is required');
+                    }
+                    
+                    if (rowErrors.length > 0) {
+                        validationErrors.push(`Row ${i + 1}: ${rowErrors.join(', ')}`);
+                        continue;
+                    }
+                    
+                    // Parse dependencies if present
+                    if (row.upstream_dependencies) {
+                        row.upstream_dependencies = row.upstream_dependencies
+                            .split(',')
+                            .map((d: string) => d.trim())
+                            .filter((d: string) => d.length > 0);
+                    } else {
+                        row.upstream_dependencies = [];
+                    }
+                    
+                    row._rowNumber = i + 1;
+                    row._isValid = true;
+                    this.importPreview.push(row);
+                }
+                
+                // Second pass: validate dependencies exist in ID column
+                this.importPreview.forEach((row) => {
+                    if (row.upstream_dependencies && row.upstream_dependencies.length > 0) {
+                        const invalidDeps = row.upstream_dependencies.filter((depId: string) => 
+                            !datasetIds.includes(depId) && !this.importPreview.some(r => r.dataset_id === depId)
+                        );
+                        
+                        if (invalidDeps.length > 0) {
+                            validationErrors.push(`Row ${row._rowNumber}: Dependencies [${invalidDeps.join(', ')}] do not exist in the dataset_id column`);
+                            row._isValid = false;
+                        }
+                    }
+                });
+                
+                // Filter out invalid rows
+                this.importPreview = this.importPreview.filter(row => row._isValid !== false);
+                
+                if (validationErrors.length > 0) {
+                    this.importError = `Validation errors found:\n${validationErrors.slice(0, 10).join('\n')}${validationErrors.length > 10 ? `\n... and ${validationErrors.length - 10} more errors` : ''}`;
+                }
+                
+                if (this.importPreview.length === 0) {
+                    this.importError = 'No valid data rows found in CSV file after validation.';
+                }
+            } catch (error) {
+                this.importError = 'Error parsing CSV file: ' + (error as Error).message;
+                console.error('CSV parsing error:', error);
+            }
+        };
+        reader.onerror = () => {
+            this.importError = 'Error reading file.';
+        };
+        reader.readAsText(file);
+    }
+    
+    isValidUUID(uuid: string): boolean {
+        // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(uuid);
+    }
+    
+    parseCSVLine(line: string): string[] {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current);
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current);
+        
+        return result.map(cell => cell.replace(/^"|"$/g, '').trim());
+    }
+    
+    importDatasets() {
+        if (!this.importFile || this.importPreview.length === 0) {
+            this.importError = 'Please select and preview a CSV file first.';
+            return;
+        }
+        
+        this.importLoading = true;
+        this.importError = '';
+        this.importSuccess = false;
+        this.importResults = { success: 0, failed: 0, errors: [] };
+        
+        // Import datasets one by one with error handling
+        const importObservables = this.importPreview.map((row, index) => {
+            // Ensure dataset_id is valid UUID (should already be validated, but double-check)
+            const datasetId = row.dataset_id && this.isValidUUID(row.dataset_id) 
+                ? row.dataset_id 
+                : this.generateUUID();
+            
+            const datasetData: Partial<Dataset> = {
+                dataset_id: datasetId,
+                dataset_name: row.dataset_name,
+                dataset_type: row.dataset_type,
+                layer: row.layer,
+                status: row.status,
+                upstream_dependencies: Array.isArray(row.upstream_dependencies) 
+                    ? row.upstream_dependencies 
+                    : []
+            };
+            
+            return this.apiService.createDataset(datasetData).pipe(
+                catchError((error) => {
+                    const errorMsg = `Row ${index + 2}: ${error.error?.error || error.message || 'Unknown error'}`;
+                    this.importResults.errors.push(errorMsg);
+                    return of({ error: errorMsg, index, failed: true });
+                })
+            );
+        });
+        
+        // Execute all imports
+        forkJoin(importObservables).subscribe({
+            next: (results) => {
+                // Count successes and failures
+                results.forEach((result: any) => {
+                    if (result && result.failed) {
+                        this.importResults.failed++;
+                    } else {
+                        this.importResults.success++;
+                    }
+                });
+                
+                this.importLoading = false;
+                this.importSuccess = true;
+                
+                // Reload datasets after import
+                if (this.importResults.success > 0) {
+                    setTimeout(() => {
+                        this.loadDatasets();
+                    }, 500);
+                }
+            },
+            error: (error) => {
+                this.importLoading = false;
+                this.importError = 'Error during import: ' + (error.message || 'Unknown error');
+            }
+        });
     }
 
     onCreateSubmit() {

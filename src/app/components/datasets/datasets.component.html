@@ -7,9 +7,17 @@
                 </h2>
                 <p class="page-subtitle">Manage and view your data collections</p>
             </div>
-            <button class="btn btn-primary" (click)="openCreateModal()">
-                <i class="bi bi-plus-circle me-2"></i>Create Dataset
-            </button>
+            <div class="header-actions">
+                <button class="btn btn-outline-primary" (click)="openCreateModal()">
+                    <i class="bi bi-plus-circle me-2"></i>Create Dataset
+                </button>
+                <button class="btn btn-outline-secondary" (click)="openImportModal()">
+                    <i class="bi bi-upload me-2"></i>Import CSV
+                </button>
+                <button class="btn btn-outline-primary" (click)="downloadCSVTemplate()">
+                    <i class="bi bi-download me-2"></i>Download Template
+                </button>
+            </div>
         </div>
     </div>
 
@@ -558,6 +566,112 @@
                     <span *ngIf="!formLoading">Delete</span>
                     <span *ngIf="formLoading">
                         <span class="spinner-border spinner-border-sm me-2"></span>Deleting...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import CSV Modal -->
+    <div class="modal-overlay" *ngIf="showImportModal" (click)="closeModals()">
+        <div class="modal-content modal-content-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title">Import Datasets from CSV</h3>
+                <button type="button" class="btn-close" (click)="closeModals()" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="import-instructions mb-4">
+                    <h5><i class="bi bi-info-circle me-2"></i>Instructions</h5>
+                    <ul class="mb-3">
+                        <li>Download the CSV template to see the required format</li>
+                        <li><strong>Required columns:</strong> <code>dataset_id</code>, <code>dataset_name</code>, <code>dataset_type</code>, <code>layer</code>, <code>status</code></li>
+                        <li><strong>Validation rules:</strong>
+                            <ul style="margin-top: 8px; margin-left: 20px;">
+                                <li>All required fields cannot be null or empty</li>
+                                <li><code>dataset_id</code> must be a valid UUID format (e.g., 550e8400-e29b-41d4-a716-446655440000)</li>
+                                <li><code>upstream_dependencies</code> values must exist in the <code>dataset_id</code> column</li>
+                            </ul>
+                        </li>
+                        <li>Optional column: <code>upstream_dependencies</code> (comma-separated dataset IDs)</li>
+                    </ul>
+                    <button class="btn btn-sm btn-outline-primary" (click)="downloadCSVTemplate()">
+                        <i class="bi bi-download me-1"></i>Download Template
+                    </button>
+                </div>
+
+                <div class="mb-3">
+                    <label for="csvFile" class="form-label">Select CSV File</label>
+                    <input type="file" 
+                           class="form-control" 
+                           id="csvFile" 
+                           accept=".csv"
+                           (change)="onFileSelected($event)">
+                    <small class="form-text text-muted">Select a CSV file to import datasets</small>
+                </div>
+
+                <div *ngIf="importError" class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <div style="white-space: pre-line;">{{ importError }}</div>
+                </div>
+
+                <div *ngIf="importSuccess" class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Import completed! 
+                    <strong>{{ importResults.success }}</strong> datasets imported successfully.
+                    <span *ngIf="importResults.failed > 0">
+                        <strong>{{ importResults.failed }}</strong> failed.
+                    </span>
+                </div>
+
+                <div *ngIf="importResults.errors.length > 0" class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Import Errors:</h6>
+                    <ul class="mb-0" style="max-height: 150px; overflow-y: auto;">
+                        <li *ngFor="let error of importResults.errors">{{ error }}</li>
+                    </ul>
+                </div>
+
+                <!-- Preview Table -->
+                <div *ngIf="importPreview.length > 0" class="import-preview">
+                    <h5 class="mb-3">Preview ({{ importPreview.length }} rows)</h5>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Dataset ID</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Layer</th>
+                                    <th>Status</th>
+                                    <th>Dependencies</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let row of importPreview; let i = index">
+                                    <td>{{ row.dataset_id || '(Auto-generated)' }}</td>
+                                    <td>{{ row.dataset_name }}</td>
+                                    <td>{{ row.dataset_type }}</td>
+                                    <td>{{ row.layer }}</td>
+                                    <td>{{ row.status }}</td>
+                                    <td>{{ row.upstream_dependencies?.join(', ') || 'None' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeModals()" [disabled]="importLoading">Cancel</button>
+                <button type="button" 
+                        class="btn btn-primary" 
+                        (click)="importDatasets()" 
+                        [disabled]="importLoading || importPreview.length === 0">
+                    <span *ngIf="!importLoading">
+                        <i class="bi bi-upload me-2"></i>Import {{ importPreview.length }} Dataset(s)
+                    </span>
+                    <span *ngIf="importLoading">
+                        <span class="spinner-border spinner-border-sm me-2"></span>Importing...
                     </span>
                 </button>
             </div>

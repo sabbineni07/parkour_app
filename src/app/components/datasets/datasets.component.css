@@ -24,6 +24,12 @@
   flex: 1;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .page-title {
   font-size: 24px;
   font-weight: 600;
@@ -592,6 +598,10 @@
   max-width: 500px;
 }
 
+.modal-content-large {
+  max-width: 900px;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -1049,6 +1059,83 @@
 .legend-color.other {
   background-color: var(--navy-white);
   border-color: var(--navy-primary);
+}
+
+/* Import CSV Styles */
+.import-instructions {
+  background-color: var(--navy-bg);
+  padding: 15px;
+  border-radius: 4px;
+  border-left: 4px solid var(--navy-primary);
+}
+
+.import-instructions h5 {
+  color: var(--navy-primary);
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.import-instructions ul {
+  margin-left: 20px;
+  color: var(--navy-text);
+  font-size: 14px;
+}
+
+.import-instructions code {
+  background-color: var(--navy-white);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--navy-primary);
+}
+
+.import-preview {
+  margin-top: 20px;
+}
+
+.import-preview h5 {
+  color: var(--navy-primary);
+  font-size: 16px;
+}
+
+.import-preview .table {
+  font-size: 13px;
+}
+
+.import-preview .table th {
+  font-weight: 600;
+  background-color: var(--navy-bg);
+  color: var(--navy-primary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.alert-warning ul {
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.alert-warning li {
+  margin-bottom: 4px;
+  font-size: 13px;
 }
 
 
